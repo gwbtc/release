@@ -41,8 +41,8 @@ permissions:
   contents: write
 
 env:
-  URBIT_BRANCH: 217e0e9e9281b2c68e3f85bcf7ccbb71012c1598
-  VERE_BRANCH: abba4b1410c301fe90bd34377de6f971c31ad0d1
+  URBIT_BRANCH: 2a4ab46a74593aa80566ef95f56a67597a1f363a
+  VERE_BRANCH: 828244e7751ffc2c7a91c34907c49a9d51f2cc8f
   URCRYPT_BRANCH: 88c4cf7fd613789207e8e47a8233799cbe8ffe19
   COMET_MINER_BRANCH: f61b430c025328900bc699d2ed16069a26ada424
   # gwbtc/urbit-dns: the %dns desk, the client of the sponsor's naming
@@ -82,9 +82,9 @@ env:
   # groundwire daad90c on, and gwlib.sh's peer seeding sends it -- and it
   # still accepts the old %bitcoin-client-connect-peer poke, so a comet on
   # an older release's gwlib.sh can still seed peers.
-  NODE_REF: 026360c3a923a34a6913d983bce0485aad863dbe
+  NODE_REF: 8c1f1ef8cdbe83c0d5d093c02b2c63bd3207115f
   # desks
-  GROUNDWIRE_BRANCH: 93d5e16d817eddf8cdd823688f49e8371e5836b9
+  GROUNDWIRE_BRANCH: 788db95d74a206064feff86b57b442caf3c6a54e
   URBIT_MCP_BRANCH: 029079b33a12fa2f6004d74ad0a92fff86af0cfb
   VITRIOL_BRANCH: 9862ec2d2b192629452c791adb3d870000125100
   TRILL_BRANCH: 0886978c3d300ee4b4adeaf617685d74da7134e8
