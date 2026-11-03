@@ -41,17 +41,10 @@ permissions:
   contents: write
 
 env:
-  URBIT_BRANCH: 32895267ca78cd2fc266c550337bdaa74431f7a0
-  VERE_BRANCH: 2c716daf5e3fdfc201c2e3ff401db235a2d4317e
+  URBIT_BRANCH: 2a4ab46a74593aa80566ef95f56a67597a1f363a
+  VERE_BRANCH: 828244e7751ffc2c7a91c34907c49a9d51f2cc8f
   URCRYPT_BRANCH: 88c4cf7fd613789207e8e47a8233799cbe8ffe19
   COMET_MINER_BRANCH: f61b430c025328900bc699d2ed16069a26ada424
-  # gwbtc/tcp-sidecar is public, so it needs no token and outsiders can
-  # reproduce the build. It is pinned by full SHA rather than by branch so a
-  # given release is reproducible. To bump: read the diff on main, then paste
-  # the new 40-char SHA here (`git ls-remote https://github.com/gwbtc/tcp-sidecar main`).
-  # 2026-09-16: gwbtc/tcp-sidecar hd/read-256k (on main c362083): 256 KB
-  # reads, so a 2 MB block is ~8 %receive events instead of ~250.
-  TCP_SIDECAR_REF: ceecf36d9810b73ca78bc0b9d117976a9cc24018
   # gwbtc/urbit-dns: the %dns desk, the client of the sponsor's naming
   # service (a groundwire.me name + an %acme certificate per comet). In the
   # pill so boot.sh can run its dns-address thread on every comet with no
@@ -64,7 +57,7 @@ env:
   URBIT_DNS_REF: 3248b57b70529ed8993d4df2827427819e4fa67e
   # gwbtc/node is public too. Its code lives on `develop`; `main` holds only
   # a README, so this is pinned to a full SHA rather than a branch name, same
-  # as TCP_SIDECAR_REF above, so a given release is reproducible. To bump:
+  # so a given release is reproducible. To bump:
   # read the diff on develop, then paste the new 40-char SHA here
   # (`git ls-remote https://github.com/gwbtc/node develop`).
   # Pinned to 063720b9 (2026-08-12): %reorg-rollback now carries
@@ -89,9 +82,9 @@ env:
   # groundwire daad90c on, and gwlib.sh's peer seeding sends it -- and it
   # still accepts the old %bitcoin-client-connect-peer poke, so a comet on
   # an older release's gwlib.sh can still seed peers.
-  NODE_REF: 39648ac355b3fbcbb7af7c6b3e2ae38bc8cbc26a
+  NODE_REF: 8c1f1ef8cdbe83c0d5d093c02b2c63bd3207115f
   # desks
-  GROUNDWIRE_BRANCH: 857620b5fef457e437ff83e801fcf1f3c32a92fe
+  GROUNDWIRE_BRANCH: 788db95d74a206064feff86b57b442caf3c6a54e
   URBIT_MCP_BRANCH: 029079b33a12fa2f6004d74ad0a92fff86af0cfb
   VITRIOL_BRANCH: 9862ec2d2b192629452c791adb3d870000125100
   TRILL_BRANCH: 0886978c3d300ee4b4adeaf617685d74da7134e8
@@ -119,7 +112,7 @@ env:
   # sur/hood.hoon; the sync is a second channel, not a gate).  This is
   # our OWN sponsor, which we install all of these desks onto, so it
   # can actually serve every one of them -- unlike production's dister,
-  # which did not publish node/tcp-sidecar/trill.
+  # which did not publish node/trill.
   DESK_DISTER: ~barmul-bolmet-ronlus-lighul--rovtun-satryc-moclug-daplyd
   # The PKI gateway a comet's first boot fetches the galaxy table and
   # network domains from (gw-vere --gateway; dawn.c =lamp= / =turf=).  gw-vere's
@@ -302,31 +295,12 @@ jobs:
           path: gwbtc-drive
           token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
-      # gwbtc/node and gwbtc/tcp-sidecar are both public, so neither takes a
-      # token. That is deliberate, and matches build-sidecar: it keeps the
-      # build reproducible outside this org.
-      #
-      # build-sidecar already checks out gwbtc/tcp-sidecar, but it is a
-      # separate job running a three-OS matrix, each with its own workspace,
-      # so nothing there is reachable from here. Handing the desk over would
-      # mean an upload-artifact/download-artifact round trip for ~25 small
-      # text files; a second checkout of the same pinned SHA is cheaper and
-      # keeps the jobs independent. Both read TCP_SIDECAR_REF, so the desk
-      # baked into the pill and the binary shipped in the tarball are always
-      # the same revision.
       - name: Checkout gwbtc/node
         uses: actions/checkout@v4
         with:
           repository: gwbtc/node
           ref: ${{ env.NODE_REF }}
           path: gwbtc-node
-
-      - name: Checkout gwbtc/tcp-sidecar (desk)
-        uses: actions/checkout@v4
-        with:
-          repository: gwbtc/tcp-sidecar
-          ref: ${{ env.TCP_SIDECAR_REF }}
-          path: gwbtc-tcp-sidecar
 
       - name: Checkout gwbtc/urbit-dns (desk)
         uses: actions/checkout@v4
@@ -436,14 +410,12 @@ jobs:
           echo "$DESK_DISTER" > "./zod/$GW_DESK/desk.ship"
           ./automation/desk-commit.sh "$GW_DESK" ./zod "$CONN_SOCK"
 
-      # -- The light-client stack: %node and %tcp-sidecar --
+      # -- The light client: %node --
       #
-      # %node is the Bitcoin light client (agent %bitcoin-client); %tcp-sidecar
-      # is the agent (%tcp) that talks to the tcp-sidecar process built by
-      # build-sidecar. Together they are the only way a ship reaches Bitcoin.
-      # Baking them into the pill is what lets a freshly booted ship sync with
-      # no post-boot desk installs; before this, every operator installed both
-      # by hand.
+      # %node is the Bitcoin light client (agent %bitcoin-client). It reaches
+      # Bitcoin through the kernel's %mach vane; the tcp-sidecar process and
+      # its %tcp-sidecar desk are gone (2026-11-03). Baking it into the pill is
+      # what lets a freshly booted ship sync with no post-boot desk installs.
 
       - name: Populate %node desk
         run: |
@@ -465,20 +437,6 @@ jobs:
           cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/node/mar/ship.hoon"
           echo "$DESK_DISTER" > ./zod/node/desk.ship
           ./automation/desk-commit.sh node ./zod "$CONN_SOCK"
-
-      - name: Populate %tcp-sidecar desk
-        run: |
-          # No kelvin patch here: the sidecar desk already publishes a
-          # multi-kelvin sys.kelvin ([%zuse 410]/[409]/[408]).
-          ./automation/desk-create.sh tcp-sidecar "$CONN_SOCK"
-          ./automation/desk-mount.sh tcp-sidecar ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh tcp-sidecar ./zod
-          cp -rL gwbtc-tcp-sidecar/desk/* ./zod/tcp-sidecar/
-          # desk.ship needs a %ship mark, or clay drops the commit silently.
-          mkdir -p "./zod/tcp-sidecar/mar"
-          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/tcp-sidecar/mar/ship.hoon"
-          echo "$DESK_DISTER" > ./zod/tcp-sidecar/desk.ship
-          ./automation/desk-commit.sh tcp-sidecar ./zod "$CONN_SOCK"
 
       - name: Install zig (assembles the %dns desk)
         run: |
@@ -525,7 +483,7 @@ jobs:
       # The agent lists are parsed out of each repo's own desk.bill rather
       # than hardcoded here, so adding an agent upstream cannot leave this
       # workflow silently pinning a stale list.
-      - name: Write %node and %tcp-sidecar desk.bill and kelvin to Clay
+      - name: Write %node desk.bill and kelvin to Clay
         run: |
           source ./automation/fyrd.sh
 
@@ -540,12 +498,9 @@ jobs:
           }
 
           NODE_BILL=$(bill_from gwbtc-node/desk/desk.bill)
-          SIDECAR_BILL=$(bill_from gwbtc-tcp-sidecar/desk/desk.bill)
-          echo "%node desk.bill:        ${NODE_BILL}"
-          echo "%tcp-sidecar desk.bill: ${SIDECAR_BILL}"
+          echo "%node desk.bill: ${NODE_BILL}"
 
-          # %node carries the widened weft; %tcp-sidecar keeps its published
-          # 410/409/408.
+          # %node carries the widened weft.
           write_desk() {
             local desk="$1" bill="$2" kelvin="$3"
             read -r -d '' INFO_FYRD << HOON || true
@@ -573,14 +528,13 @@ jobs:
           }
 
           write_desk node        "$NODE_BILL"    '~[[%zuse 409] [%zuse 408]]'
-          write_desk tcp-sidecar "$SIDECAR_BILL" '~[[%zuse 410] [%zuse 409] [%zuse 408]]'
           sleep 5
 
-      - name: Verify %node and %tcp-sidecar landed in Clay
+      - name: Verify %node landed in Clay
         run: |
           source ./automation/fyrd.sh
           FAILED=0
-          for desk in node tcp-sidecar; do
+          for desk in node; do
             read -r -d '' SCRY_FYRD << HOON || true
           :*  0
               %fyrd  %base  %khan-eval  %noun  %ted-eval
@@ -608,7 +562,7 @@ jobs:
             fi
           done
           [ "$FAILED" -eq 0 ] || exit 1
-          echo "%node and %tcp-sidecar are both installable on this kernel."
+          echo "%node is installable on this kernel."
 
       - name: Set up Zig 0.15.2
         uses: mlugg/setup-zig@v2
@@ -768,7 +722,7 @@ jobs:
           # %drive is a Landscape docket app: build its client bundle into
           # desk/app/drive/, then commit like any desk.  Its sys.kelvin is
           # [%zuse 410]; widen it to also accept 408 (this pill's kelvin),
-          # exactly as %tcp-sidecar does, or it installs suspended.
+          # or it installs suspended.
           # drive's frontend (package.json + build) lives in client/, per its
           # Makefile (`cd client && bun install && bun run build`); the build
           # writes the JS/CSS bundle into desk/app/drive/.
@@ -825,7 +779,6 @@ jobs:
               =/  dez=(list [desk path])
                 :~  [%GWDESK /(scot %p our)/GWDESK/(scot %da now)]
                     [%node /(scot %p our)/node/(scot %da now)]
-                    [%tcp-sidecar /(scot %p our)/tcp-sidecar/(scot %da now)]
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                     [%vitriol /(scot %p our)/vitriol/(scot %da now)]
                     [%trill /(scot %p our)/trill/(scot %da now)]
@@ -857,7 +810,7 @@ jobs:
           # than interpolated so the heredoc stays quoted -- Hoon and shell
           # fight over too many characters otherwise.
           BUILD_PILL_FYRD="${BUILD_PILL_FYRD//GWDESK/$GW_DESK}"
-          echo "pill will bake desks: $GW_DESK node tcp-sidecar mcp vitriol trill grubbery jars trunk groups webterm landscape drive dns chorus"
+          echo "pill will bake desks: $GW_DESK node mcp vitriol trill grubbery jars trunk groups webterm landscape drive dns chorus"
 
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
           echo "$RESULT"
@@ -1122,169 +1075,11 @@ jobs:
           path: dist/gw-onboard
 
   # =============================================================
-  # Build tcp-sidecar for each platform
-  #
-  # Why this job exists:
-  #   The sidecar is the light client's only transport. A ship cannot reach
-  #   Bitcoin, and therefore cannot sync, without it. Before this job every
-  #   operator compiled it by hand.
-  #
-  # Source: gwbtc/tcp-sidecar (public), pinned by SHA in TCP_SIDECAR_REF.
-  # No token is needed; that is deliberate, so the build is reproducible
-  # outside this org.
-  #
-  # OpenSSL is built from source rather than taken from the runner, for two
-  # reasons that both bite in production:
-  #   1. Linux artifacts are static musl, matching how gw-vere ships
-  #      (build-vere passes -Dtarget=*-linux-musl to zig). No distro ships a
-  #      static musl libssl, so there is nothing to link against otherwise.
-  #   2. --openssldir=/etc/ssl makes SSL_CTX_set_default_verify_paths()
-  #      (sidecar/main.c:618, used with SSL_VERIFY_PEER) resolve to the host's
-  #      real CA roots: /etc/ssl/certs on Linux, /etc/ssl/cert.pem on macOS.
-  #      Homebrew's libssl bakes in /opt/homebrew/etc/openssl@3 and would fail
-  #      every TLS verification on a machine without Homebrew. SSL_CERT_FILE /
-  #      SSL_CERT_DIR still override at runtime.
-  #
-  # musl has no <execinfo.h>, which sidecar/main.c:12 includes for its crash
-  # handler. A shim is placed ahead of the system include path instead of
-  # patching the source (build-extras does the equivalent for comet-miner with
-  # sed). The "--- CRASH: signal N ---" marker that ops/gwsup.sh greps for is
-  # written with write(2) before backtrace_symbols_fd, so crash *detection* is
-  # unaffected on Linux; only the symbol dump is lost. macOS keeps both.
-  #
-  # The binary is emitted as `tcp-sidecar`, not `gw-tcp-sidecar`: ops/gwsup.sh
-  # and ops/stopship.sh find it with `pgrep -f 'bin/tcp-sidecar'`, which a
-  # prefixed name would not match.
-  # =============================================================
-  build-sidecar:
-    name: "Build sidecar: ${{ matrix.target }}"
-    strategy:
-      matrix:
-        include:
-          - target: linux-x86_64
-            runner: ubuntu-22.04
-            zig_target: x86_64-linux-musl
-            ossl_target: linux-x86_64
-          - target: linux-aarch64
-            runner: ubuntu-24.04-arm
-            zig_target: aarch64-linux-musl
-            ossl_target: linux-aarch64
-          - target: macos-aarch64
-            runner: macos-14
-            zig_target: aarch64-macos
-            ossl_target: darwin64-arm64-cc
-    runs-on: ${{ matrix.runner }}
-    env:
-      OPENSSL_VERSION: 3.5.4
-      OPENSSL_SHA256: 967311f84955316969bdb1d8d4b983718ef42338639c621ec4c34fddef355e99
-    steps:
-      - name: Set up Zig 0.14.1
-        uses: mlugg/setup-zig@v2
-        with:
-          version: 0.14.1
-          cache-key: tcp-sidecar-${{ matrix.zig_target }}
-
-      - name: Checkout gwbtc/tcp-sidecar
-        uses: actions/checkout@v4
-        with:
-          repository: gwbtc/tcp-sidecar
-          ref: ${{ env.TCP_SIDECAR_REF }}
-          path: gwbtc-tcp-sidecar
-
-      - name: Build static OpenSSL
-        run: |
-          set -eu
-          curl -fL --retry 3 --retry-delay 10 -o openssl.tar.gz \
-            "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/openssl-${OPENSSL_VERSION}.tar.gz"
-          if command -v sha256sum >/dev/null 2>&1; then
-            echo "${OPENSSL_SHA256}  openssl.tar.gz" | sha256sum -c -
-          else
-            echo "${OPENSSL_SHA256}  openssl.tar.gz" | shasum -a 256 -c -
-          fi
-          mkdir -p openssl-src
-          tar xzf openssl.tar.gz -C openssl-src --strip-components=1
-          cd openssl-src
-          if [ "${{ runner.os }}" = "Linux" ]; then
-            export CC="zig cc -target ${{ matrix.zig_target }}"
-            export AR="zig ar"
-            export RANLIB="zig ranlib"
-          fi
-          ./Configure ${{ matrix.ossl_target }} \
-            no-shared no-tests no-docs no-apps no-legacy \
-            --openssldir=/etc/ssl --libdir=lib \
-            --prefix="${GITHUB_WORKSPACE}/openssl-out"
-          make -j"$(getconf _NPROCESSORS_ONLN)"
-          make install_sw
-
-      - name: Build tcp-sidecar
-        run: |
-          set -eu
-          OSSL="${GITHUB_WORKSPACE}/openssl-out"
-          cd gwbtc-tcp-sidecar/sidecar
-          if [ "${{ runner.os }}" = "Linux" ]; then
-            mkdir -p compat
-            cat > compat/execinfo.h <<'SHIM'
-          /* Shim: musl has no glibc backtrace(). Placed ahead of the system
-             include path for -target *-linux-musl builds only. The crash
-             marker in main.c is written with write(2) before this is called,
-             so ops/gwsup.sh still detects the crash; only symbols are lost. */
-          #ifndef GW_COMPAT_EXECINFO_H
-          #define GW_COMPAT_EXECINFO_H
-          static inline int backtrace(void **buffer, int size) {
-            (void)buffer; (void)size; return 0;
-          }
-          static inline char **backtrace_symbols(void *const *buffer, int size) {
-            (void)buffer; (void)size; return (char **)0;
-          }
-          static inline void backtrace_symbols_fd(void *const *buffer, int size, int fd) {
-            (void)buffer; (void)size; (void)fd;
-          }
-          #endif
-          SHIM
-            make CC="zig cc -target ${{ matrix.zig_target }}" \
-                 CFLAGS="-Wall -Wextra -O2 -I. -Icompat -I${OSSL}/include" \
-                 LDFLAGS="-static -L${OSSL}/lib -lssl -lcrypto"
-          else
-            make CFLAGS="-Wall -Wextra -O2 -I. -I${OSSL}/include" \
-                 LDFLAGS="${OSSL}/lib/libssl.a ${OSSL}/lib/libcrypto.a"
-          fi
-          cp tcp-sidecar "${GITHUB_WORKSPACE}/tcp-sidecar"
-          cd "${GITHUB_WORKSPACE}"
-          chmod +x ./tcp-sidecar
-
-      - name: Inspect and smoke-test tcp-sidecar
-        run: |
-          set -eu
-          file ./tcp-sidecar || true
-          # No release tarball carries checksums today (neither do gw-vere,
-          # comet_miner or gw-base.pill), so record it in the job log at least.
-          if command -v sha256sum >/dev/null 2>&1; then
-            sha256sum ./tcp-sidecar
-          else
-            shasum -a 256 ./tcp-sidecar
-          fi
-          # Both Linux targets are native-arch runners and macos-14 is arm64,
-          # so every matrix entry can run its own artifact. With no argument
-          # the sidecar prints usage and exits 1.
-          OUT="$(./tcp-sidecar 2>&1 || true)"
-          echo "$OUT"
-          case "$OUT" in
-            *"usage:"*) echo "smoke test OK" ;;
-            *) echo "ERROR: tcp-sidecar did not print its usage line"; exit 1 ;;
-          esac
-
-      - name: Upload tcp-sidecar
-        uses: actions/upload-artifact@v4
-        with:
-          name: gw-tcp-sidecar-${{ matrix.target }}
-          path: ./tcp-sidecar
-
-  # =============================================================
   # Validate the pill boots, then publish release
   # =============================================================
   validate-and-release:
     name: Validate and release
-    needs: [build-pill, build-vere, build-extras, build-sidecar]
+    needs: [build-pill, build-vere, build-extras]
     runs-on: ubuntu-22.04
     steps:
       # the workflow's helper scripts (automation/) live in gwbtc/urbit, which
@@ -1396,8 +1191,6 @@ jobs:
             chmod +x "pkg-${target}/gw-vere" "pkg-${target}/comet_miner"
             cp "./artifacts/gw-onboard-${target}/gw-onboard" "pkg-${target}/gw-onboard"
             chmod +x "pkg-${target}/gw-onboard"
-            cp "./artifacts/gw-tcp-sidecar-${target}/tcp-sidecar" "pkg-${target}/tcp-sidecar"
-            chmod +x "pkg-${target}/tcp-sidecar"
             # The installer's shared helpers and its per-ship supervisor.
             # These were 463 of causeway/public/boot.sh's 1,521 lines, carried
             # as heredocs and written to disk at install time -- not because
@@ -1436,7 +1229,7 @@ jobs:
             # it is a failed install; this is the same lesson as the desk
             # commits above, applied to the thing users actually download.
             for want in gw-vere gw-base.pill comet_miner gw-onboard \
-                        tcp-sidecar gwlib.sh gwsup.sh requirements.txt \
+                        gwlib.sh gwsup.sh requirements.txt \
                         causeway boot.sh causeway-src/causeway.py \
                         causeway-src/causeway_tui.py causeway-src/pyproject.toml; do
               tar tzf "groundwire-${target}.tar.gz" | grep -qx "./${want}" || {
@@ -1526,7 +1319,6 @@ jobs:
           - \`gw-base.pill\` — Brass pill
           - \`comet_miner\` — Comet miner
           - \`gw-onboard\` — Onboarding script
-          - \`tcp-sidecar\` — TCP sidecar (gwbtc/tcp-sidecar@${TCP_SIDECAR_REF}); the light client's only Bitcoin transport, statically linked
           - \`gwlib.sh\`, \`gwsup.sh\` — the installer's shared helpers and its per-ship supervisor, installed and run by \`causeway/public/boot.sh\`
           - \`requirements.txt\` — Python dependencies (\`pip install -r requirements.txt\`)
 
