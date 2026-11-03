@@ -438,6 +438,16 @@ jobs:
           echo "$DESK_DISTER" > ./zod/node/desk.ship
           ./automation/desk-commit.sh node ./zod "$CONN_SOCK"
 
+      - name: Install zig (assembles the %dns desk)
+        run: |
+          # gwbtc/urbit-dns has no checked-in vendored deps; its build.zig
+          # fetches the pinned base-dev/dns/mnemonyms imports and lays the
+          # desk out under zig-out/. Same zig the laptop builds it with.
+          curl -fsSL -o "$RUNNER_TEMP/zig.tar.xz" \
+            https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-x86_64-linux-0.15.2" >> "$GITHUB_PATH"
+
       - name: Populate %dns desk
         run: |
           # The naming service's client desk: the dns-address thread that
