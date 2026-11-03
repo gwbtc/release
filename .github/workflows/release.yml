@@ -10,9 +10,16 @@ on:
   push:
     branches:
       - main
+    # Documentation and tooling commits are not releases.
+    paths-ignore:
+      - 'README.md'
+      - 'bump'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'README.md'
+      - 'bump'
   workflow_dispatch:
     inputs:
       urbit_ref:
