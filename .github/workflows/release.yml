@@ -215,7 +215,7 @@ jobs:
       - name: Checkout gwbtc/urbit
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || 'gwbtc/urbit' }}
+          repository: gwbtc/urbit
           ref: ${{ inputs.urbit_ref || env.URBIT_BRANCH }}
           path: gwbtc-urbit
           token: ${{ secrets.GH_PAT_RELEASE || github.token }}
