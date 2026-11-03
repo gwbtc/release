@@ -42,7 +42,7 @@ fi
 key=$1; ref=${2:-}
 row=$(table | awk -v k="$key" '$1==k'); [ -n "$row" ] || { echo "unknown pin $key; run ./bump for the list" >&2; exit 1; }
 repo=$(echo "$row" | awk '{print $2}'); [ -n "$ref" ] || ref=$(echo "$row" | awk '{print $3}')
-case "$ref" in [0-9a-f]????????????????????????????????????????) sha=$ref ;; *) sha=$(resolve "$repo" "$ref") ;; esac
+if printf "%s" "$ref" | grep -qE "^[0-9a-f]{40}$"; then sha=$ref; else sha=$(resolve "$repo" "$ref"); fi
 [ -n "$sha" ] || { echo "cannot resolve $ref on $repo" >&2; exit 1; }
 old=$(current "$key")
 sed -i.bak -E "s/^(  $key: )[0-9a-f]{40}/\1$sha/" "$WF" && rm -f "$WF.bak"
