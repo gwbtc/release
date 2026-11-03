@@ -170,8 +170,13 @@ jobs:
       - name: Clean up leftover piers
         run: sudo rm -rf ./zod || true
 
-      - name: Checkout repository
+      # the workflow's helper scripts (automation/) live in gwbtc/urbit, which
+      # used to be the repo this ran in; check it out at the kernel pin
+      - name: Checkout gwbtc/urbit (automation scripts)
         uses: actions/checkout@v4
+        with:
+          repository: gwbtc/urbit
+          ref: ${{ inputs.urbit_ref || env.URBIT_BRANCH }}
 
       - name: Download custom vere (kelvin 408 compatible)
         uses: actions/download-artifact@v4
@@ -1282,8 +1287,13 @@ jobs:
     needs: [build-pill, build-vere, build-extras, build-sidecar]
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout repository
+      # the workflow's helper scripts (automation/) live in gwbtc/urbit, which
+      # used to be the repo this ran in; check it out at the kernel pin
+      - name: Checkout gwbtc/urbit (automation scripts)
         uses: actions/checkout@v4
+        with:
+          repository: gwbtc/urbit
+          ref: ${{ inputs.urbit_ref || env.URBIT_BRANCH }}
 
       # Causeway is Python source, not a per-platform binary, so it is copied
       # in here rather than built in the matrix.  Same ref as the desk in the
