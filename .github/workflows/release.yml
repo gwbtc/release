@@ -438,6 +438,41 @@ jobs:
           echo "$DESK_DISTER" > ./zod/node/desk.ship
           ./automation/desk-commit.sh node ./zod "$CONN_SOCK"
 
+      - name: Populate %dns desk
+        run: |
+          # The naming service's client desk: the dns-address thread that
+          # asks the sponsor for a groundwire.me name and installs the turf
+          # (eyre then orders the certificate through %acme). In the pill so
+          # boot.sh can run it on every comet without an install step. The
+          # desk carries its own kelvin ([%zuse 408]) and one agent, %gw-dns,
+          # which is inert on a comet (its on-init is the default).
+          (cd gwbtc-urbit-dns && zig build)
+          test -f gwbtc-urbit-dns/zig-out/ted/dns/address.hoon
+          grep -q '%zuse 408' gwbtc-urbit-dns/zig-out/sys.kelvin
+          # The self-check that hung the thread must stay gone (PR #1).
+          test "$(grep -c 'self-check-http' gwbtc-urbit-dns/zig-out/ted/dns/address.hoon || true)" = 0
+          ./automation/desk-create.sh dns "$CONN_SOCK"
+          ./automation/desk-mount.sh dns ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh dns ./zod
+          cp -rL gwbtc-urbit-dns/zig-out/* ./zod/dns/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p ./zod/dns/mar
+          cp gwbtc-urbit/pkg/base-dev/mar/ship.hoon ./zod/dns/mar/ship.hoon
+          echo "$DESK_DISTER" > ./zod/dns/desk.ship
+          ./automation/desk-commit.sh dns ./zod "$CONN_SOCK"
+
+      # The filesystem commits above are the primary path and do land both
+      # files -- but only as long as Clay's mount sync behaves, and the "Key
+      # gotchas" note at the top of this job records that it does not always.
+      # A dropped desk.bill is silent: the pill still boots, the desk is still
+      # there, and the agent simply never starts. So write both files straight
+      # to Clay via %info, then read them back and fail the build if either is
+      # missing. %mut with identical content is a no-op, so this is safe when
+      # the commit already worked.
+      #
+      # The agent lists are parsed out of each repo's own desk.bill rather
+      # than hardcoded here, so adding an agent upstream cannot leave this
+      # workflow silently pinning a stale list.
       - name: Write %node desk.bill and kelvin to Clay
         run: |
           source ./automation/fyrd.sh
