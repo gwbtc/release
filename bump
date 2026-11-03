@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# bump: move one pinned input of the release to a commit.
+#   ./bump                 show every pin, and whether it is the tip of its usual branch
+#   ./bump KEY [REF]       resolve REF (default: the usual branch) on KEY's repo and
+#                          write the commit into .github/workflows/release.yml
+# Commit the result and open a PR: merging it is the release.
+set -euo pipefail
+WF=.github/workflows/release.yml
+table() { cat <<'T'
+URBIT_BRANCH        gwbtc/urbit           gw/release
+VERE_BRANCH         gwbtc/vere            gw/release
+GROUNDWIRE_BRANCH   gwbtc/groundwire      gw/release
+URCRYPT_BRANCH      gwbtc/urcrypt         gw/cmp-pub
+COMET_MINER_BRANCH  gwbtc/comet-miner     tinnus-feed
+TCP_SIDECAR_REF     gwbtc/tcp-sidecar     main
+URBIT_DNS_REF       gwbtc/urbit-dns       main
+NODE_REF            gwbtc/node            develop
+URBIT_MCP_BRANCH    gwbtc/urbit-mcp       main
+VITRIOL_BRANCH      gwbtc/vitriol         master
+TRILL_BRANCH        gwbtc/trill           develop
+LANDSCAPE_BRANCH    tloncorp/landscape    mp/next/kelvin/408
+DRIVE_BRANCH        gwbtc/drive           main
+GRUBBERY_BRANCH     gwbtc/grubbery        develop
+JARS_BRANCH         mopfel-winrux/jars    master
+TRUNK_BRANCH        gwbtc/trunk           main
+GROUPS_REF          tloncorp/tlon-apps    master
+WEBTERM_REF         urbit/webterm         master
+CHORUS_REF          gwbtc/chorus          main
+T
+}
+current() { sed -nE "s/^  $1: ([0-9a-f]{40}).*/\1/p" "$WF" | head -1; }
+resolve() { git ls-remote "https://github.com/$1" "refs/heads/$2" "refs/tags/$2" 2>/dev/null | head -1 | cut -c1-40; }
+if [ $# -eq 0 ]; then
+  printf '%-20s %-22s %-20s %-10s %-10s %s\n' KEY REPO BRANCH PINNED TIP STATE
+  table | while read -r k r b; do
+    cur=$(current "$k"); tip=$(resolve "$r" "$b" || true)
+    st="current"; [ -n "$tip" ] && [ "$tip" != "$cur" ] && st="behind"; [ -z "$tip" ] && st="?"
+    printf '%-20s %-22s %-20s %-10s %-10s %s\n' "$k" "$r" "$b" "${cur:0:9}" "${tip:0:9}" "$st"
+  done
+  exit 0
+fi
+key=$1; ref=${2:-}
+row=$(table | awk -v k="$key" '$1==k'); [ -n "$row" ] || { echo "unknown pin $key; run ./bump for the list" >&2; exit 1; }
+repo=$(echo "$row" | awk '{print $2}'); [ -n "$ref" ] || ref=$(echo "$row" | awk '{print $3}')
+case "$ref" in [0-9a-f]????????????????????????????????????????) sha=$ref ;; *) sha=$(resolve "$repo" "$ref") ;; esac
+[ -n "$sha" ] || { echo "cannot resolve $ref on $repo" >&2; exit 1; }
+old=$(current "$key")
+sed -i.bak -E "s/^(  $key: )[0-9a-f]{40}/\1$sha/" "$WF" && rm -f "$WF.bak"
+echo "$key: $old -> $sha ($repo $ref)"
