@@ -89,7 +89,7 @@ env:
   # groundwire daad90c on, and gwlib.sh's peer seeding sends it -- and it
   # still accepts the old %bitcoin-client-connect-peer poke, so a comet on
   # an older release's gwlib.sh can still seed peers.
-  NODE_REF: 8c1f1ef8cdbe83c0d5d093c02b2c63bd3207115f
+  NODE_REF: 8a062161e83a2e919ff74f4cbf3368f69e3a413d
   # desks
   GROUNDWIRE_BRANCH: 788db95d74a206064feff86b57b442caf3c6a54e
   URBIT_MCP_BRANCH: 029079b33a12fa2f6004d74ad0a92fff86af0cfb
