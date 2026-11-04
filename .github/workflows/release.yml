@@ -134,7 +134,7 @@ env:
   # the desk is assembled by the repo's own `zig build`, which vendors the
   # mcp, urbit-markdown, mnemonyms, kademlia and base-dev imports it pins;
   # its kelvin is 408. fbe7e0a (2026-10-05): update kademlia import.
-  CHORUS_REF: 6d43fd9e4c8cf3aec99f1f5d3809cf6be50f8a32
+  CHORUS_REF: 10dcfbd04f1edca36dafab38a31d4b8cec1b50de
 
 jobs:
   # =============================================================
