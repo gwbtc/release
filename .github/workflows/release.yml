@@ -887,7 +887,7 @@ jobs:
             runner: ubuntu-24.04-arm
             zig_target: aarch64-linux-musl
           - target: macos-aarch64
-            runner: macos-14
+            runner: macos-15
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
@@ -977,7 +977,7 @@ jobs:
             runner: ubuntu-24.04-arm
             zig_target: aarch64-linux-musl
           - target: macos-aarch64
-            runner: macos-14
+            runner: macos-15
             zig_target: aarch64-macos
     runs-on: ${{ matrix.runner }}
     steps:
