@@ -100,7 +100,7 @@ env:
   # grubbery develop at 2944cce is what groundwire-alpha-2026.10.29_2 shipped;
   # its 18 later commits (to 2026-11-03) crash the pill's validate boot out of
   # memory during %grubbery's install. Bump when develop boots again.
-  GRUBBERY_BRANCH: 2944cce0214be6a0e9a1becd1a8b86ecd72591de
+  GRUBBERY_BRANCH: 7017e1bdc70cb097535612dd191f228752528d28
   JARS_BRANCH: e8c533cdb933f8558835aabac64dc01c794c61f0
   TRUNK_BRANCH: 7bda1e27e90edca2dccbde4869db5c49e936746f
   # tloncorp/tlon-apps: the %groups desk, pinned by full SHA because master
@@ -1132,7 +1132,7 @@ jobs:
           VERE_BIN: ./gw-vere
           CONN_SOCK: ./zod2/.urb/conn.sock
         run: |
-          ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
+          ./gw-vere -d --loom 33 -F zod -B ./gw-base.pill -c zod2
           ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
           echo "Fake ~zod boot successful."
           kill "$(cat ./zod2/.urb/pid 2>/dev/null)" 2>/dev/null || true
@@ -1144,7 +1144,7 @@ jobs:
           COMET=$(echo "$MINER_OUT" | grep '^comet:' | sed 's/^comet: ~//')
           FEED=$(echo "$MINER_OUT" | grep '^feed:' | awk '{print $2}')
           echo "Mined comet: $COMET"
-          ./gw-vere -d -B ./gw-base.pill -c mycomet -w "$COMET" -G "$FEED" --gateway "$GW_GATEWAY"
+          ./gw-vere -d --loom 33 -B ./gw-base.pill -c mycomet -w "$COMET" -G "$FEED" --gateway "$GW_GATEWAY"
           ./automation/wait-idle.sh ./mycomet/.urb/conn.sock ./gw-vere
           echo "Comet boot successful."
           kill "$(cat ./mycomet/.urb/pid 2>/dev/null)" 2>/dev/null || true
@@ -1161,7 +1161,7 @@ jobs:
           echo "Mined comet: $COMET"
           # Generate a dummy feed key for testing
           FEED=$(openssl rand -hex 32)
-          ./gw-vere -d -B ./gw-base.pill -w "$COMET" -G "$FEED" -c mycomet-wallet --gateway "$GW_GATEWAY"
+          ./gw-vere -d --loom 33 -B ./gw-base.pill -w "$COMET" -G "$FEED" -c mycomet-wallet --gateway "$GW_GATEWAY"
           ./automation/wait-idle.sh ./mycomet-wallet/.urb/conn.sock ./gw-vere
           echo "Comet boot with wallet successful."
           kill "$(cat ./mycomet-wallet/.urb/pid 2>/dev/null)" 2>/dev/null || true
