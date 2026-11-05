@@ -1141,7 +1141,13 @@ jobs:
           # the commit (run 42101426619 passed on the boot's line)
           before=$(grep -c 'kernel updated' zod2.log || true)
           mark=$(wc -l < zod2.log)
-          printf '::  kernel-reload gate %s\n' "$GITHUB_RUN_ID" >> ./zod2/base/sys/zuse.hoon
+          # a comment in zuse changes no type and rebuilds no agent (run
+          # 42109226779 passed with nothing reinstalled).  A new gift arm in
+          # a vane widens sign-arvo, which every agent's cards and every
+          # stored strand type reach: the same kind of change %mach made.
+          grep -q '\[%blit p=(list blit)\]' ./zod2/base/sys/lull.hoon
+          sed -i 's|^    \$%  \[%blit p=(list blit)\].*$|&\n        [%gate-probe ~]|' ./zod2/base/sys/lull.hoon
+          grep -n 'gate-probe' ./zod2/base/sys/lull.hoon
           ./automation/desk-commit.sh base ./zod2 "$CONN_SOCK"
           now=$before
           for i in $(seq 1 90); do
