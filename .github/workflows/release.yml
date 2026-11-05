@@ -92,7 +92,7 @@ env:
   NODE_REF: 8a062161e83a2e919ff74f4cbf3368f69e3a413d
   # desks
   GROUNDWIRE_BRANCH: 50ee6edd918d1e328c85ed4c324d08a75666238f
-  URBIT_MCP_BRANCH: 029079b33a12fa2f6004d74ad0a92fff86af0cfb
+  URBIT_MCP_BRANCH: cf317478726ef849754881c1e6b5feccfdfc504b
   VITRIOL_BRANCH: 9862ec2d2b192629452c791adb3d870000125100
   TRILL_BRANCH: 0886978c3d300ee4b4adeaf617685d74da7134e8
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
@@ -1148,24 +1148,37 @@ jobs:
           grep -q '\[%blit p=(list blit)\]' ./zod2/base/sys/lull.hoon
           sed -i 's|^    \$%  \[%blit p=(list blit)\].*$|&\n        [%gate-probe ~]|' ./zod2/base/sys/lull.hoon
           grep -n 'gate-probe' ./zod2/base/sys/lull.hoon
-          ./automation/desk-commit.sh base ./zod2 "$CONN_SOCK"
+          # the commit helper gives up after 600 s; a kernel update is ONE
+          # event that recompiles every desk in the pill and then revives
+          # every agent (48 min on a 2-vCPU droplet).  Send the commit, then
+          # watch the console: a new "kernel updated", then "gall: reviving"
+          # lines until they stop growing.
+          ./automation/desk-commit.sh base ./zod2 "$CONN_SOCK" || true
           now=$before
-          for i in $(seq 1 90); do
+          for i in $(seq 1 450); do
             now=$(grep -c 'kernel updated' zod2.log || true)
             [ "$now" -gt "$before" ] && break
             sleep 10
           done
-          [ "$now" -gt "$before" ] || { echo "ERROR: no new 'kernel updated' within 15 min of |commit %base"; tail -n 80 zod2.log; exit 1; }
-          ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
-          sleep 60
+          [ "$now" -gt "$before" ] || { echo "ERROR: no new 'kernel updated' within 75 min of |commit %base"; tail -n 80 zod2.log; exit 1; }
+          echo "kernel updated at $(date -u +%T); waiting for every agent to revive"
+          last=-1; same=0
+          for i in $(seq 1 450); do
+            n=$(tail -n "+$((mark + 1))" zod2.log | grep -c 'gall: reviving %' || true)
+            if [ "$n" -gt 0 ] && [ "$n" = "$last" ]; then same=$((same + 1)); else same=0; fi
+            last=$n
+            [ "$same" -ge 12 ] && break
+            sleep 10
+          done
           ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
           tail -n "+$((mark + 1))" zod2.log > zod2-after.log
-          echo "console after the commit: $(wc -l < zod2-after.log) lines"
-          grep -E 'kernel updated|rebuilding|installing %|reloading %|bumped %' zod2-after.log | head -40
-          if grep -qE 'load-failed|bail: ' zod2-after.log; then
+          echo "console after the commit: $(wc -l < zod2-after.log) lines; agents revived: $last"
+          grep -E 'kernel updated|rebuilding|installing %|reviving %|bumped %' zod2-after.log | head -80
+          [ "$last" -gt 0 ] || { echo "ERROR: no agent was revived after the kernel update"; tail -n 80 zod2-after.log; exit 1; }
+          if grep -qE 'load-failed|nest-fail' zod2-after.log; then
             echo "ERROR: an agent did not survive the kernel reload:"; grep -nE 'load-failed|nest-fail|bail: ' zod2-after.log | head -20; tail -n 80 zod2-after.log; exit 1
           fi
-          echo "Kernel-reload gate passed: every agent reloaded."
+          echo "Kernel-reload gate passed: every agent reloaded ($last revived)."
           kill "$(cat ./zod2/.urb/pid 2>/dev/null)" 2>/dev/null || true
           sleep 3
 
