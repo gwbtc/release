@@ -1033,57 +1033,47 @@ jobs:
           name: comet-miner-${{ matrix.target }}
           path: ./comet_miner
 
-      - name: Checkout gwbtc/groundwire (for onboarding script)
+      - name: Checkout gwbtc/groundwire (for the gw command)
         uses: actions/checkout@v4
         with:
           repository: gwbtc/groundwire
           ref: ${{ inputs.groundwire_ref || env.GROUNDWIRE_BRANCH }}
-          path: gwbtc-groundwire-onboard
+          path: gwbtc-groundwire-gw
           token: ${{ secrets.GH_PAT_RELEASE || github.token }}
 
       - name: Set up Python for PyInstaller
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
-      - name: Build gw-onboard
+      # One frozen binary per platform: the gw command (install, mint, start,
+      # stop, status, code, logs, name, peers, update, invite) with Causeway
+      # inside it.  Nothing on the user's machine needs a Python.  It finds
+      # gw-vere, comet_miner and gw-base.pill beside its own real path.
+      - name: Build gw
         run: |
-          BOOTING_DIR=gwbtc-groundwire-onboard/onboarding/booting
-          if [[ "$OSTYPE" == darwin* ]]; then
-            sed -i '' 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' "$BOOTING_DIR/gw-onboard.py"
-            sed -i '' 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' "$BOOTING_DIR/gw-onboard.py"
-          else
-            sed -i 's|VERE_BIN = .*|VERE_BIN = "./gw-vere"|' "$BOOTING_DIR/gw-onboard.py"
-            sed -i 's|COMET_MINER_BIN = .*|COMET_MINER_BIN = "./comet_miner"|' "$BOOTING_DIR/gw-onboard.py"
-          fi
-          pip install pyinstaller requests embit PyNaCl cffi mmh3 bitstring bitarray
-          pyinstaller --onefile --name gw-onboard \
-            --hidden-import _cffi_backend \
-            --collect-all cffi \
-            --hidden-import nacl.bindings \
-            --hidden-import nacl._sodium \
+          cd gwbtc-groundwire-gw/causeway/desktop
+          pip install pyinstaller .
+          printf 'import sys\nfrom gw.cli import main\nsys.exit(main())\n' > gw_entry.py
+          pyinstaller --onefile --name gw --clean --log-level WARN \
+            --hidden-import causeway --hidden-import causeway_tui \
+            --hidden-import _cffi_backend --collect-all cffi \
+            --hidden-import nacl.bindings --hidden-import nacl._sodium \
             --hidden-import embit.util.secp256k1 \
-            --hidden-import bitstring.bitstore_bitarray \
-            --hidden-import bitstring.bitstore_bitarray_helpers \
-            --hidden-import bitstring.bitstore_common_helpers \
-            --hidden-import bitstring.bitstore_tibs \
-            --hidden-import bitstring.bitstore_tibs_helpers \
-            --hidden-import bitarray \
-            --hidden-import bitarray._bitarray \
-            --hidden-import bitarray._util \
-            --hidden-import mmh3 \
-            "$BOOTING_DIR/gw-onboard.py"
-          chmod +x dist/gw-onboard
+            --collect-all textual --collect-all rich --collect-all cbor2 --collect-all qrcode \
+            --add-data "vendor:vendor" \
+            gw_entry.py
+          chmod +x dist/gw
+          ./dist/gw --help | head -3
+          ./dist/gw causeway --help | head -2
+          cp dist/gw "$GITHUB_WORKSPACE/gw"
 
-      - name: Upload gw-onboard
+      - name: Upload gw
         uses: actions/upload-artifact@v4
         with:
-          name: gw-onboard-${{ matrix.target }}
-          path: dist/gw-onboard
+          name: gw-${{ matrix.target }}
+          path: ./gw
 
-  # =============================================================
-  # Validate the pill boots, then publish release
-  # =============================================================
   validate-and-release:
     name: Validate and release
     needs: [build-pill, build-vere, build-extras]
@@ -1132,9 +1122,27 @@ jobs:
           VERE_BIN: ./gw-vere
           CONN_SOCK: ./zod2/.urb/conn.sock
         run: |
-          ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
+          ./gw-vere -F zod -B ./gw-base.pill -c zod2 > zod2.log 2>&1 &
           ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
           echo "Fake ~zod boot successful."
+          # Kernel-reload gate: every agent in the pill must survive a kernel
+          # update.  Two did not this week (chorus#6, urbit-mcp#42): a
+          # self-scry inside +on-load, and a gate stored in agent state; each
+          # rolled the sponsor's |commit %base back.  Touch zuse, commit, and
+          # demand "kernel updated" with no %load-failed in the console.
+          ./automation/desk-mount.sh base ./zod2 "$CONN_SOCK"
+          printf '::  kernel-reload gate %s\n' "$GITHUB_RUN_ID" >> ./zod2/base/sys/zuse.hoon
+          ./automation/desk-commit.sh base ./zod2 "$CONN_SOCK"
+          ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
+          for i in $(seq 1 60); do
+            grep -q 'kernel updated' zod2.log && break
+            sleep 10
+          done
+          grep -q 'kernel updated' zod2.log || { echo "ERROR: no 'kernel updated' after |commit %base"; tail -n 60 zod2.log; exit 1; }
+          if grep -qE 'load-failed|bail: ' zod2.log; then
+            echo "ERROR: an agent did not survive the kernel reload:"; grep -nE 'load-failed|nest-fail|bail: ' zod2.log | head -20; tail -n 80 zod2.log; exit 1
+          fi
+          echo "Kernel-reload gate passed: every agent reloaded."
           kill "$(cat ./zod2/.urb/pid 2>/dev/null)" 2>/dev/null || true
           sleep 3
 
@@ -1189,15 +1197,14 @@ jobs:
 
       - name: Package release artifacts
         run: |
-          printf 'embit\nPyNaCl\nrequests\n' > requirements.txt
           for target in linux-x86_64 linux-aarch64 macos-aarch64; do
             mkdir -p "pkg-${target}"
             cp ./gw-base.pill "pkg-${target}/"
             cp "./artifacts/gw-vere-${target}/gw-vere" "pkg-${target}/gw-vere"
             cp "./artifacts/comet-miner-${target}/comet_miner" "pkg-${target}/comet_miner"
             chmod +x "pkg-${target}/gw-vere" "pkg-${target}/comet_miner"
-            cp "./artifacts/gw-onboard-${target}/gw-onboard" "pkg-${target}/gw-onboard"
-            chmod +x "pkg-${target}/gw-onboard"
+            cp "./artifacts/gw-${target}/gw" "pkg-${target}/gw"
+            chmod +x "pkg-${target}/gw"
             # The installer's shared helpers and its per-ship supervisor.
             # These were 463 of causeway/public/boot.sh's 1,521 lines, carried
             # as heredocs and written to disk at install time -- not because
@@ -1209,36 +1216,17 @@ jobs:
             # release SHA256SUMS and leaves boot.sh's own audit surface at
             # "does this fetch and exec the right thing".
             # boot.sh REQUIRES both; a tarball missing them is one it refuses.
-            cp ./automation/installer/gwlib.sh "pkg-${target}/gwlib.sh"
-            cp ./automation/installer/gwsup.sh "pkg-${target}/gwsup.sh"
-            chmod +x "pkg-${target}/gwlib.sh" "pkg-${target}/gwsup.sh"
-            cp requirements.txt "pkg-${target}/"
-
-            # Causeway: the tool that actually mints a confidential comet.
-            # Until now no release contained it, so the only way to get one
-            # was to clone the repo -- which meant the protocol we ship in the
-            # pill had no shipped way to create an identity for it.
-            # `causeway` is a launcher that builds a private venv from
-            # causeway-src/ on first run; nothing lands outside this tree.
-            cp -r gwbtc-groundwire/causeway/desktop "pkg-${target}/causeway-src"
-            rm -rf "pkg-${target}/causeway-src/__pycache__" \
-                   "pkg-${target}/causeway-src/causeway.egg-info" \
-                   "pkg-${target}/causeway-src/tests"
-            cp gwbtc-groundwire/causeway/public/causeway "pkg-${target}/causeway"
-            # boot.sh ships here too, so a release can boot itself without
-            # depending on the website being up to date.
+            # boot.sh is a shim now: it translates the old flags and execs gw.
+            # It rides along for one more release so the old curl line works.
             cp gwbtc-groundwire/causeway/public/boot.sh "pkg-${target}/boot.sh"
-            chmod +x "pkg-${target}/causeway" "pkg-${target}/boot.sh"
+            chmod +x "pkg-${target}/boot.sh"
 
             tar czf "groundwire-${target}.tar.gz" -C "pkg-${target}" .
             # Do not take a cp on trust.  A tarball missing gwlib.sh is one
             # that every boot.sh refuses, and the first anyone would hear of
             # it is a failed install; this is the same lesson as the desk
             # commits above, applied to the thing users actually download.
-            for want in gw-vere gw-base.pill comet_miner gw-onboard \
-                        gwlib.sh gwsup.sh requirements.txt \
-                        causeway boot.sh causeway-src/causeway.py \
-                        causeway-src/causeway_tui.py causeway-src/pyproject.toml; do
+            for want in gw-vere gw-base.pill comet_miner gw boot.sh; do
               tar tzf "groundwire-${target}.tar.gz" | grep -qx "./${want}" || {
                 echo "ERROR: groundwire-${target}.tar.gz does not contain ${want}"
                 exit 1
