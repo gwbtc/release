@@ -1132,6 +1132,9 @@ jobs:
           # self-scry inside +on-load, and a gate stored in agent state; each
           # rolled the sponsor's |commit %base back.  Touch zuse, commit, and
           # demand "kernel updated" with no %load-failed in the console.
+          # the automation scripts call `urbit` by name (the pill job installs
+          # it that way); this job only has ./gw-vere
+          sudo ln -sf "$PWD/gw-vere" /usr/local/bin/urbit
           ./automation/desk-mount.sh base ./zod2 "$CONN_SOCK"
           printf '::  kernel-reload gate %s\n' "$GITHUB_RUN_ID" >> ./zod2/base/sys/zuse.hoon
           ./automation/desk-commit.sh base ./zod2 "$CONN_SOCK"
