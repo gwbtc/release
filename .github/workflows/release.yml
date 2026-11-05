@@ -1122,8 +1122,10 @@ jobs:
           VERE_BIN: ./gw-vere
           CONN_SOCK: ./zod2/.urb/conn.sock
         run: |
-          ./gw-vere -F zod -B ./gw-base.pill -c zod2 > zod2.log 2>&1 &
-          ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
+          # -t: no terminal, the form every supervised ship runs with; without
+          # it a backgrounded vere wants a tty and never opens conn.sock
+          ./gw-vere -t -F zod -B ./gw-base.pill -c zod2 > zod2.log 2>&1 &
+          ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN" || { echo "fake ~zod did not come up:"; tail -n 80 zod2.log; exit 1; }
           echo "Fake ~zod boot successful."
           # Kernel-reload gate: every agent in the pill must survive a kernel
           # update.  Two did not this week (chorus#6, urbit-mcp#42): a
