@@ -1136,16 +1136,28 @@ jobs:
           # it that way); this job only has ./gw-vere
           sudo ln -sf "$PWD/gw-vere" /usr/local/bin/urbit
           ./automation/desk-mount.sh base ./zod2 "$CONN_SOCK"
+          # a fresh boot from the pill already prints "clay: kernel updated"
+          # once; demand a NEW one, and judge only the console written after
+          # the commit (run 42101426619 passed on the boot's line)
+          before=$(grep -c 'kernel updated' zod2.log || true)
+          mark=$(wc -l < zod2.log)
           printf '::  kernel-reload gate %s\n' "$GITHUB_RUN_ID" >> ./zod2/base/sys/zuse.hoon
           ./automation/desk-commit.sh base ./zod2 "$CONN_SOCK"
-          ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
-          for i in $(seq 1 60); do
-            grep -q 'kernel updated' zod2.log && break
+          now=$before
+          for i in $(seq 1 90); do
+            now=$(grep -c 'kernel updated' zod2.log || true)
+            [ "$now" -gt "$before" ] && break
             sleep 10
           done
-          grep -q 'kernel updated' zod2.log || { echo "ERROR: no 'kernel updated' after |commit %base"; tail -n 60 zod2.log; exit 1; }
-          if grep -qE 'load-failed|bail: ' zod2.log; then
-            echo "ERROR: an agent did not survive the kernel reload:"; grep -nE 'load-failed|nest-fail|bail: ' zod2.log | head -20; tail -n 80 zod2.log; exit 1
+          [ "$now" -gt "$before" ] || { echo "ERROR: no new 'kernel updated' within 15 min of |commit %base"; tail -n 80 zod2.log; exit 1; }
+          ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
+          sleep 60
+          ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
+          tail -n "+$((mark + 1))" zod2.log > zod2-after.log
+          echo "console after the commit: $(wc -l < zod2-after.log) lines"
+          grep -E 'kernel updated|rebuilding|installing %|reloading %|bumped %' zod2-after.log | head -40
+          if grep -qE 'load-failed|bail: ' zod2-after.log; then
+            echo "ERROR: an agent did not survive the kernel reload:"; grep -nE 'load-failed|nest-fail|bail: ' zod2-after.log | head -20; tail -n 80 zod2-after.log; exit 1
           fi
           echo "Kernel-reload gate passed: every agent reloaded."
           kill "$(cat ./zod2/.urb/pid 2>/dev/null)" 2>/dev/null || true
