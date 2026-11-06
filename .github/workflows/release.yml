@@ -1326,18 +1326,24 @@ jobs:
             SUFFIX=$((SUFFIX + 1))
           done
 
-          # --latest=false, ALWAYS, and it is load-bearing.
+          # --prerelease --latest=false, ALWAYS. Publishing is not releasing.
           #
-          # Every release this org publishes is a --prerelease, and when there
-          # is no full release GitHub serves the newest prerelease at
-          # /releases/latest.  Verified: that URL resolves to the newest
-          # groundwire-daily tag.  boot.sh and install.sh both resolve "latest"
-          # through it when no --version is given.
+          # Every push to main publishes a candidate that nobody is handed by
+          # default. What users get is decided by one rule, implemented
+          # identically by the website's install.sh and by `gw install` /
+          # `gw update` (causeway/desktop/gw/release.py in gwbtc/groundwire):
+          # the highest-versioned groundwire-alpha-* release whose pre-release
+          # box has been cleared; while none is cleared, the highest-versioned
+          # prerelease. --prerelease on either takes the newest build
+          # regardless; --version <tag> pins one. Versions are compared on the
+          # tag's numeric fields, never on GitHub's list order.
           #
-          # So without this flag, a developer build from this lane -- or a
-          # release candidate cut from an unmerged branch -- silently becomes
-          # what every new user installs by default.  This lane is the
-          # bleeding-edge channel; daily-release.yml owns the user channel.
+          # So the release is the promotion, done by hand once a candidate has
+          # been tried on a real comet:
+          #   gh release edit <tag> -R gwbtc/release --prerelease=false --latest
+          # (--latest keeps GitHub's own /releases/latest and its "Latest"
+          # badge pointing at the same tag, for anything that still reads
+          # them, e.g. the boot.sh of the releases from before gw.)
           gh release create "$TAG" \
             groundwire-linux-x86_64.tar.gz \
             groundwire-linux-aarch64.tar.gz \
@@ -1349,24 +1355,27 @@ jobs:
             --title "$TITLE" \
             --notes "Built from the pins at gwbtc/release@${GITHUB_SHA} (\`${GITHUB_REF_NAME}\`)
 
-          Release channel: \`bleeding-edge\`
-          Tag format: \`groundwire-alpha-*\`
-          Daily onboarding channel tags: \`groundwire-daily-*\`
+          This is a **pre-release** until someone clears that box. What the
+          installer (\`curl -fsSL https://groundwire.io/install.sh | bash\`),
+          \`gw install\` and \`gw update\` hand out is the highest-versioned
+          \`groundwire-alpha-*\` release that has been promoted out of
+          pre-release; while none is, the highest-versioned pre-release.
+          \`--prerelease\` takes the newest build regardless; \`--version ${TAG}\`
+          pins this one.
 
-          Each tarball contains everything needed to onboard:
+          Each tarball contains everything needed to mint and run a comet:
+          - \`gw\` — the Groundwire command: install, mint, start, stop, status, code, logs, name, peers, update, invite
           - \`gw-vere\` — Urbit runtime
           - \`gw-base.pill\` — Brass pill
           - \`comet_miner\` — Comet miner
-          - \`gw-onboard\` — Onboarding script
-          - \`gwlib.sh\`, \`gwsup.sh\` — the installer's shared helpers and its per-ship supervisor, installed and run by \`causeway/public/boot.sh\`
-          - \`requirements.txt\` — Python dependencies (\`pip install -r requirements.txt\`)
+          - \`boot.sh\` — a shim that translates the old boot.sh flags into gw subcommands
 
           ## Verifying the download
 
               curl -fsSLO https://github.com/gwbtc/release/releases/download/${TAG}/SHA256SUMS
               sha256sum -c SHA256SUMS
 
-          The digest covers the tarball, and so everything inside it. boot.sh
+          The digest covers the tarball, and so everything inside it. gw
           does this for you, and \`--sha256 <hex>\` pins a digest you got
           somewhere else.
 
@@ -1374,7 +1383,7 @@ jobs:
           tarballs, so it is a check against a bad download and a stable thing
           to pin — not a defence against a compromised GitHub.
 
-          Usage: \`tar xzf groundwire-<platform>.tar.gz && ./gw-onboard\`
+          Usage: \`tar xzf groundwire-<platform>.tar.gz ./gw && ./gw install --from-file groundwire-<platform>.tar.gz --version ${TAG} && gw mint\`
           - \`groundwire-linux-x86_64.tar.gz\`
           - \`groundwire-linux-aarch64.tar.gz\`
           - \`groundwire-macos-aarch64.tar.gz\`"
