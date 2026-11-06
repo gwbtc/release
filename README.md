@@ -18,9 +18,19 @@ to this repo is one complete, reproducible description of a release.
    tagged `groundwire-alpha-<date>` here, with the three tarballs and
    `SHA256SUMS`.
 5. Promote: when a prerelease has been tried on a real comet, clear its
-   prerelease flag (`gh release edit <tag> --prerelease=false`). GitHub then
-   serves it at `releases/latest`, which is what the website's installer
-   follows. Nobody has to promote for a merge to happen.
+   prerelease flag:
+
+       gh release edit <tag> -R gwbtc/release --prerelease=false --latest
+
+   That is the release. The website's installer, `gw install` and
+   `gw update` all follow one rule: the highest-versioned
+   `groundwire-alpha-*` release that is not a prerelease; while none has
+   been promoted, the highest-versioned prerelease. So a merge publishes a
+   candidate nobody is handed by default, and promotion hands it out.
+   `--prerelease` on any of them takes the newest build regardless, and
+   `--version <tag>` pins one. (`--latest` also keeps GitHub's own
+   `releases/latest` on the same tag, for the boot.sh of releases from
+   before gw, which reads it.) Nobody has to promote for a merge to happen.
 
 A test build from main's pins without publishing:
 `gh workflow run release.yml -f publish=false`; the run's artifacts hold the
