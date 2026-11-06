@@ -1132,7 +1132,7 @@ jobs:
           VERE_BIN: ./gw-vere
           CONN_SOCK: ./zod2/.urb/conn.sock
         run: |
-          ./gw-vere -d --loom 33 -F zod -B ./gw-base.pill -c zod2
+          ./gw-vere -d -F zod -B ./gw-base.pill -c zod2
           ./automation/wait-idle.sh "$CONN_SOCK" "$VERE_BIN"
           echo "Fake ~zod boot successful."
           kill "$(cat ./zod2/.urb/pid 2>/dev/null)" 2>/dev/null || true
@@ -1144,7 +1144,7 @@ jobs:
           COMET=$(echo "$MINER_OUT" | grep '^comet:' | sed 's/^comet: ~//')
           FEED=$(echo "$MINER_OUT" | grep '^feed:' | awk '{print $2}')
           echo "Mined comet: $COMET"
-          ./gw-vere -d --loom 33 -B ./gw-base.pill -c mycomet -w "$COMET" -G "$FEED" --gateway "$GW_GATEWAY"
+          ./gw-vere -d -B ./gw-base.pill -c mycomet -w "$COMET" -G "$FEED" --gateway "$GW_GATEWAY"
           ./automation/wait-idle.sh ./mycomet/.urb/conn.sock ./gw-vere
           echo "Comet boot successful."
           kill "$(cat ./mycomet/.urb/pid 2>/dev/null)" 2>/dev/null || true
@@ -1161,7 +1161,7 @@ jobs:
           echo "Mined comet: $COMET"
           # Generate a dummy feed key for testing
           FEED=$(openssl rand -hex 32)
-          ./gw-vere -d --loom 33 -B ./gw-base.pill -w "$COMET" -G "$FEED" -c mycomet-wallet --gateway "$GW_GATEWAY"
+          ./gw-vere -d -B ./gw-base.pill -w "$COMET" -G "$FEED" -c mycomet-wallet --gateway "$GW_GATEWAY"
           ./automation/wait-idle.sh ./mycomet-wallet/.urb/conn.sock ./gw-vere
           echo "Comet boot with wallet successful."
           kill "$(cat ./mycomet-wallet/.urb/pid 2>/dev/null)" 2>/dev/null || true
