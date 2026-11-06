@@ -48,7 +48,16 @@ permissions:
   contents: write
 
 env:
-  URBIT_BRANCH: 2a4ab46a74593aa80566ef95f56a67597a1f363a
+  # d59b63d2 (2026-11-03, gw/release): PRs #74 + #86 on top of 2a4ab46a.
+  # #74 makes jael accept a stock-shaped %public-keys-result (a planet's or
+  # moon's keys answered by a stock parent) instead of crashing on it, and
+  # makes an ames %lost re-arm the retry instead of killing jael's
+  # subscription; ames also drops bad %open packets. Without it a comet
+  # never learns a moon's keys, so `|install ~moon %desk` never starts.
+  # Only sys/vane/ames.hoon and sys/vane/jael.hoon change in the pill
+  # (plus aqua test files; no lull/zuse), so desks need no rebuild. #86 is
+  # the console logging policy. 2a4ab46a was the no-sidecar kernel.
+  URBIT_BRANCH: d59b63d29e6249657635737a4d2f5a1c98a7dfb1
   VERE_BRANCH: 828244e7751ffc2c7a91c34907c49a9d51f2cc8f
   URCRYPT_BRANCH: 88c4cf7fd613789207e8e47a8233799cbe8ffe19
   COMET_MINER_BRANCH: f61b430c025328900bc699d2ed16069a26ada424
@@ -91,10 +100,13 @@ env:
   # an older release's gwlib.sh can still seed peers.
   NODE_REF: 8a062161e83a2e919ff74f4cbf3368f69e3a413d
   # desks
-  # ce85d110 (2026-11-05, gw/release): PR #180, the gw command. The desk
-  # itself is unchanged from 50ee6edd; the tarball's gw binary is built
-  # from causeway/desktop at this ref.
-  GROUNDWIRE_BRANCH: ce85d110e2f69ebc3e5b44af35d0c794c732f072
+  # fc50afbc (2026-11-06, gw/release): PR #181 on top of ce85d110 (PR #180,
+  # the gw command). gw's release resolver now picks the highest-versioned
+  # PROMOTED groundwire-alpha-* release (else the highest prerelease), with
+  # --prerelease for the newest build and --version to pin, matching the
+  # website's install.sh. The desk itself is unchanged from 50ee6edd; the
+  # tarball's gw binary is built from causeway/desktop at this ref.
+  GROUNDWIRE_BRANCH: fc50afbce2ce8235f972457523546885b658ee6e
   # b1ee236c (2026-11-06, main): the fix for urbit-mcp#42. The tool gates
   # kept in %mcp-server's state are typed with a `*` product instead of
   # $shed:khan, so the state no longer names $sign-arvo and survives a
