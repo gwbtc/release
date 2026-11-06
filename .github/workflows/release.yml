@@ -91,8 +91,16 @@ env:
   # an older release's gwlib.sh can still seed peers.
   NODE_REF: 8a062161e83a2e919ff74f4cbf3368f69e3a413d
   # desks
-  GROUNDWIRE_BRANCH: 50ee6edd918d1e328c85ed4c324d08a75666238f
-  URBIT_MCP_BRANCH: cf317478726ef849754881c1e6b5feccfdfc504b
+  # ce85d110 (2026-11-05, gw/release): PR #180, the gw command. The desk
+  # itself is unchanged from 50ee6edd; the tarball's gw binary is built
+  # from causeway/desktop at this ref.
+  GROUNDWIRE_BRANCH: ce85d110e2f69ebc3e5b44af35d0c794c732f072
+  # b1ee236c (2026-11-06, main): the fix for urbit-mcp#42. The tool gates
+  # kept in %mcp-server's state are typed with a `*` product instead of
+  # $shed:khan, so the state no longer names $sign-arvo and survives a
+  # kernel reload that changes it. The kernel-reload gate below is what
+  # proves that for a given pin.
+  URBIT_MCP_BRANCH: b1ee236c1811c580c14efe4a16fd2f127f6e4d59
   VITRIOL_BRANCH: 9862ec2d2b192629452c791adb3d870000125100
   TRILL_BRANCH: 0886978c3d300ee4b4adeaf617685d74da7134e8
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
