@@ -105,9 +105,6 @@ env:
   TRILL_BRANCH: 0886978c3d300ee4b4adeaf617685d74da7134e8
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
   DRIVE_BRANCH: f9ee299ba88e0a89cde7f3418cba2736b9f6edd7
-  # grubbery develop at 2944cce is what groundwire-alpha-2026.10.29_2 shipped;
-  # its 18 later commits (to 2026-11-03) crash the pill's validate boot out of
-  # memory during %grubbery's install. Bump when develop boots again.
   GRUBBERY_BRANCH: 648bbf3e166193d7e245bd3064a970892b50f3f6
   JARS_BRANCH: e8c533cdb933f8558835aabac64dc01c794c61f0
   TRUNK_BRANCH: 7bda1e27e90edca2dccbde4869db5c49e936746f
