@@ -117,7 +117,7 @@ env:
   TRILL_BRANCH: 0886978c3d300ee4b4adeaf617685d74da7134e8
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
   DRIVE_BRANCH: f9ee299ba88e0a89cde7f3418cba2736b9f6edd7
-  GRUBBERY_BRANCH: a412728bcaadabb3e4a55b2af2e4e40f6f8ca975
+  GRUBBERY_BRANCH: 9c0ed98a33a0dfbe1e90e16cb2a1e9dc970a6e09
   JARS_BRANCH: e8c533cdb933f8558835aabac64dc01c794c61f0
   TRUNK_BRANCH: 7bda1e27e90edca2dccbde4869db5c49e936746f
   # tloncorp/tlon-apps: the %groups desk, pinned by full SHA because master
