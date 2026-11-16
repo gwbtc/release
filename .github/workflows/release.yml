@@ -100,13 +100,13 @@ env:
   # an older release's gwlib.sh can still seed peers.
   NODE_REF: 8a062161e83a2e919ff74f4cbf3368f69e3a413d
   # desks
-  # fc50afbc (2026-11-06, gw/release): PR #181 on top of ce85d110 (PR #180,
-  # the gw command). gw's release resolver now picks the highest-versioned
-  # PROMOTED groundwire-alpha-* release (else the highest prerelease), with
-  # --prerelease for the newest build and --version to pin, matching the
-  # website's install.sh. The desk itself is unchanged from 50ee6edd; the
-  # tarball's gw binary is built from causeway/desktop at this ref.
-  GROUNDWIRE_BRANCH: fc50afbce2ce8235f972457523546885b658ee6e
+  # e4c13dc1 (2026-11-16, bm/populate-chorus, gwbtc/groundwire#185 on top
+  # of fc50afbc): gw's setup steps import %chorus's MCP tools, resources
+  # and templates into %mcp-server once gall has installed %chorus. Move
+  # this to the merge commit when #185 lands. The desk itself is unchanged
+  # from 50ee6edd; the tarball's gw binary is built from causeway/desktop
+  # at this ref.
+  GROUNDWIRE_BRANCH: e4c13dc10f01d279ea47f25167767b5d1b4eb6ab
   # b1ee236c (2026-11-06, main): the fix for urbit-mcp#42. The tool gates
   # kept in %mcp-server's state are typed with a `*` product instead of
   # $shed:khan, so the state no longer names $sign-arvo and survives a
