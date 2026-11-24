@@ -107,12 +107,7 @@ env:
   # website's install.sh. The desk itself is unchanged from 50ee6edd; the
   # tarball's gw binary is built from causeway/desktop at this ref.
   GROUNDWIRE_BRANCH: fc50afbce2ce8235f972457523546885b658ee6e
-  # b1ee236c (2026-11-06, main): the fix for urbit-mcp#42. The tool gates
-  # kept in %mcp-server's state are typed with a `*` product instead of
-  # $shed:khan, so the state no longer names $sign-arvo and survives a
-  # kernel reload that changes it. The kernel-reload gate below is what
-  # proves that for a given pin.
-  URBIT_MCP_BRANCH: b1ee236c1811c580c14efe4a16fd2f127f6e4d59
+  URBIT_MCP_BRANCH: fc373d862026b9aaa52ae10fd4e6e71f8b6379a8
   VITRIOL_BRANCH: 9862ec2d2b192629452c791adb3d870000125100
   TRILL_BRANCH: 0886978c3d300ee4b4adeaf617685d74da7134e8
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
