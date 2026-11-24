@@ -57,8 +57,15 @@ env:
   # Only sys/vane/ames.hoon and sys/vane/jael.hoon change in the pill
   # (plus aqua test files; no lull/zuse), so desks need no rebuild. #86 is
   # the console logging policy. 2a4ab46a was the no-sidecar kernel.
-  URBIT_BRANCH: d59b63d29e6249657635737a4d2f5a1c98a7dfb1
-  VERE_BRANCH: 828244e7751ffc2c7a91c34907c49a9d51f2cc8f
+  #
+  # f5c01d22 / e8986f42 (2026-11-24, gwbtc/urbit#95, gwbtc/vere#34, branch
+  # bm/mach-sync on each): Mach synced with upstream bm/mach (urbit#7437,
+  # vere#1149). Connections carry a name and %connect takes an IP address;
+  # TLS and DNS are gone. Lull's +mach core changes, so the pill, the
+  # runtime and NODE_REF's %bitcoin-client must move together. Re-pin to
+  # gw/release once both PRs merge.
+  URBIT_BRANCH: f5c01d22d817dd1f8aa00fbbce64740214b71cb9
+  VERE_BRANCH: e8986f42728147b751f1fdb3d713c3f513021d45
   URCRYPT_BRANCH: 88c4cf7fd613789207e8e47a8233799cbe8ffe19
   COMET_MINER_BRANCH: f61b430c025328900bc699d2ed16069a26ada424
   # gwbtc/urbit-dns: the %dns desk, the client of the sponsor's naming
@@ -98,21 +105,24 @@ env:
   # groundwire daad90c on, and gwlib.sh's peer seeding sends it -- and it
   # still accepts the old %bitcoin-client-connect-peer poke, so a comet on
   # an older release's gwlib.sh can still seed peers.
-  NODE_REF: 8a062161e83a2e919ff74f4cbf3368f69e3a413d
+  #
+  # 50c7f711 (2026-11-24, gwbtc/node rjg/mach2): develop 8a062161 plus one
+  # commit that moves %bitcoin-client to the named Mach API. It must match
+  # URBIT_BRANCH's lull: the old API does not compile against it.
+  NODE_REF: 50c7f711f75cf9e6e6193ce05fd4780a2a2f3bca
   # desks
-  # fc50afbc (2026-11-06, gw/release): PR #181 on top of ce85d110 (PR #180,
-  # the gw command). gw's release resolver now picks the highest-versioned
-  # PROMOTED groundwire-alpha-* release (else the highest prerelease), with
-  # --prerelease for the newest build and --version to pin, matching the
-  # website's install.sh. The desk itself is unchanged from 50ee6edd; the
-  # tarball's gw binary is built from causeway/desktop at this ref.
-  GROUNDWIRE_BRANCH: fc50afbce2ce8235f972457523546885b658ee6e
+  # d125ea01 (2026-11-24, bm/populate-missing-desk, gwbtc/groundwire#187):
+  # gw skips its armillary and wallet-sweep setup steps on a ship with no
+  # %grubbery desk, which this release no longer carries. Also brings
+  # #184 (gw-btc /x/confidential-points scry). The tarball's gw binary is
+  # built from causeway/desktop at this ref. Re-pin to gw/release once
+  # #187 merges.
+  GROUNDWIRE_BRANCH: d125ea014c7b09e1da8124fe7c24573aa8314ff6
   URBIT_MCP_BRANCH: fc373d862026b9aaa52ae10fd4e6e71f8b6379a8
   VITRIOL_BRANCH: 9862ec2d2b192629452c791adb3d870000125100
   TRILL_BRANCH: 0886978c3d300ee4b4adeaf617685d74da7134e8
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
   DRIVE_BRANCH: f9ee299ba88e0a89cde7f3418cba2736b9f6edd7
-  GRUBBERY_BRANCH: a412728bcaadabb3e4a55b2af2e4e40f6f8ca975
   JARS_BRANCH: e8c533cdb933f8558835aabac64dc01c794c61f0
   TRUNK_BRANCH: 7bda1e27e90edca2dccbde4869db5c49e936746f
   # tloncorp/tlon-apps: the %groups desk, pinned by full SHA because master
@@ -262,13 +272,6 @@ jobs:
           repository: gwbtc/trill
           ref: ${{ env.TRILL_BRANCH }}
           path: gwbtc-trill
-
-      - name: Checkout gwbtc/grubbery
-        uses: actions/checkout@v4
-        with:
-          repository: gwbtc/grubbery
-          ref: ${{ env.GRUBBERY_BRANCH }}
-          path: gwbtc-grubbery
 
       - name: Checkout mopfel-winrux/jars
         uses: actions/checkout@v4
@@ -457,15 +460,16 @@ jobs:
           echo "$DESK_DISTER" > ./zod/node/desk.ship
           ./automation/desk-commit.sh node ./zod "$CONN_SOCK"
 
-      - name: Install zig (assembles the %dns desk)
-        run: |
-          # gwbtc/urbit-dns has no checked-in vendored deps; its build.zig
-          # fetches the pinned base-dev/dns/mnemonyms imports and lays the
-          # desk out under zig-out/. Same zig the laptop builds it with.
-          curl -fsSL -o "$RUNNER_TEMP/zig.tar.xz" \
-            https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
-          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/zig-x86_64-linux-0.15.2" >> "$GITHUB_PATH"
+      # gwbtc/urbit-dns has no checked-in vendored deps; its build.zig
+      # fetches the pinned base-dev/dns/mnemonyms imports and lays the desk
+      # out under zig-out/. The %mcp desk and others below use this zig too.
+      # A bare curl from ziglang.org took 11.5 min in run 45413399832;
+      # setup-zig's cache hit took 6 s.
+      - name: Set up Zig 0.15.2
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+          cache-key: pill-desks
 
       - name: Populate %dns desk
         run: |
@@ -583,12 +587,6 @@ jobs:
           [ "$FAILED" -eq 0 ] || exit 1
           echo "%node is installable on this kernel."
 
-      - name: Set up Zig 0.15.2
-        uses: mlugg/setup-zig@v2
-        with:
-          version: 0.15.2
-          cache-key: pill-desks
-
       - name: Populate %mcp desk
         run: |
           ROOT="${GITHUB_WORKSPACE:-$PWD}"
@@ -633,19 +631,6 @@ jobs:
           cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/trill/mar/ship.hoon"
           echo "$DESK_DISTER" > ./zod/trill/desk.ship
           ./automation/desk-commit.sh trill ./zod "$CONN_SOCK"
-
-      - name: Populate %grubbery desk
-        run: |
-          # self-contained; its sys.kelvin already lists [%zuse 408].
-          ./automation/desk-create.sh grubbery "$CONN_SOCK"
-          ./automation/desk-mount.sh grubbery ./zod "$CONN_SOCK"
-          ./automation/desk-populate.sh grubbery ./zod
-          cp -rL gwbtc-grubbery/desk/* ./zod/grubbery/
-          # desk.ship needs a %ship mark, or clay drops the commit silently.
-          mkdir -p "./zod/grubbery/mar"
-          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/grubbery/mar/ship.hoon"
-          echo "$DESK_DISTER" > ./zod/grubbery/desk.ship
-          ./automation/desk-commit.sh grubbery ./zod "$CONN_SOCK"
 
       - name: Populate %jars desk
         run: |
@@ -801,7 +786,6 @@ jobs:
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                     [%vitriol /(scot %p our)/vitriol/(scot %da now)]
                     [%trill /(scot %p our)/trill/(scot %da now)]
-                    [%grubbery /(scot %p our)/grubbery/(scot %da now)]
                     [%jars /(scot %p our)/jars/(scot %da now)]
                     [%trunk /(scot %p our)/trunk/(scot %da now)]
                     [%groups /(scot %p our)/groups/(scot %da now)]
@@ -829,7 +813,7 @@ jobs:
           # than interpolated so the heredoc stays quoted -- Hoon and shell
           # fight over too many characters otherwise.
           BUILD_PILL_FYRD="${BUILD_PILL_FYRD//GWDESK/$GW_DESK}"
-          echo "pill will bake desks: $GW_DESK node mcp vitriol trill grubbery jars trunk groups webterm landscape drive dns chorus"
+          echo "pill will bake desks: $GW_DESK node mcp vitriol trill jars trunk groups webterm landscape drive dns chorus"
 
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
           echo "$RESULT"
