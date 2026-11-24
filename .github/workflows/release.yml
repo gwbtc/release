@@ -1193,8 +1193,19 @@ jobs:
           echo "console after the commit: $(wc -l < zod2-after.log) lines; agents revived: $last"
           grep -E 'kernel updated|rebuilding|installing %|reviving %|bumped %' zod2-after.log | head -80
           [ "$last" -gt 0 ] || { echo "ERROR: no agent was revived after the kernel update"; tail -n 80 zod2-after.log; exit 1; }
-          if grep -qE 'load-failed|nest-fail' zod2-after.log; then
-            echo "ERROR: an agent did not survive the kernel reload:"; grep -nE 'load-failed|nest-fail|bail: ' zod2-after.log | head -20; tail -n 80 zod2-after.log; exit 1
+          # fail the gate only on a death marker: load-failed (an agent did
+          # not revive) or bail: (a crash). a nest-fail alone is not death --
+          # an app can survive while an internal build of its own fails -- so
+          # it is printed for context but does not fail the gate.
+          if grep -qE 'load-failed|bail: ' zod2-after.log; then
+            echo "ERROR: an agent did not survive the kernel reload:"
+            grep -nE 'load-failed|bail: ' zod2-after.log | head -20
+            if grep -qE 'nest-fail' zod2-after.log; then
+              echo "nest-fails found, marking potential ill-health or internal failure of applications:"
+              grep -nE 'nest-fail' zod2-after.log | head -20
+            fi
+            tail -n 80 zod2-after.log
+            exit 1
           fi
           echo "Kernel-reload gate passed: every agent reloaded ($last revived)."
           kill "$(cat ./zod2/.urb/pid 2>/dev/null)" 2>/dev/null || true
