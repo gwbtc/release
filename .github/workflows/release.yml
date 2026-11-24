@@ -123,6 +123,7 @@ env:
   TRILL_BRANCH: 0886978c3d300ee4b4adeaf617685d74da7134e8
   LANDSCAPE_BRANCH: 5193635c45a346b3030280e76ee32d6fa290bc98
   DRIVE_BRANCH: f9ee299ba88e0a89cde7f3418cba2736b9f6edd7
+  GRUBBERY_BRANCH: d90141a800fcae1396e4410108fba5b4955a7a05
   JARS_BRANCH: e8c533cdb933f8558835aabac64dc01c794c61f0
   TRUNK_BRANCH: 7bda1e27e90edca2dccbde4869db5c49e936746f
   # tloncorp/tlon-apps: the %groups desk, pinned by full SHA because master
@@ -272,6 +273,13 @@ jobs:
           repository: gwbtc/trill
           ref: ${{ env.TRILL_BRANCH }}
           path: gwbtc-trill
+
+      - name: Checkout gwbtc/grubbery
+        uses: actions/checkout@v4
+        with:
+          repository: gwbtc/grubbery
+          ref: ${{ env.GRUBBERY_BRANCH }}
+          path: gwbtc-grubbery
 
       - name: Checkout mopfel-winrux/jars
         uses: actions/checkout@v4
@@ -632,6 +640,19 @@ jobs:
           echo "$DESK_DISTER" > ./zod/trill/desk.ship
           ./automation/desk-commit.sh trill ./zod "$CONN_SOCK"
 
+      - name: Populate %grubbery desk
+        run: |
+          # self-contained; its sys.kelvin already lists [%zuse 408].
+          ./automation/desk-create.sh grubbery "$CONN_SOCK"
+          ./automation/desk-mount.sh grubbery ./zod "$CONN_SOCK"
+          ./automation/desk-populate.sh grubbery ./zod
+          cp -rL gwbtc-grubbery/desk/* ./zod/grubbery/
+          # desk.ship needs a %ship mark, or clay drops the commit silently.
+          mkdir -p "./zod/grubbery/mar"
+          cp "gwbtc-urbit/pkg/base-dev/mar/ship.hoon" "./zod/grubbery/mar/ship.hoon"
+          echo "$DESK_DISTER" > ./zod/grubbery/desk.ship
+          ./automation/desk-commit.sh grubbery ./zod "$CONN_SOCK"
+
       - name: Populate %jars desk
         run: |
           # self-contained; its sys.kelvin already lists [%zuse 408].
@@ -786,6 +807,7 @@ jobs:
                     [%mcp /(scot %p our)/mcp/(scot %da now)]
                     [%vitriol /(scot %p our)/vitriol/(scot %da now)]
                     [%trill /(scot %p our)/trill/(scot %da now)]
+                    [%grubbery /(scot %p our)/grubbery/(scot %da now)]
                     [%jars /(scot %p our)/jars/(scot %da now)]
                     [%trunk /(scot %p our)/trunk/(scot %da now)]
                     [%groups /(scot %p our)/groups/(scot %da now)]
@@ -813,7 +835,7 @@ jobs:
           # than interpolated so the heredoc stays quoted -- Hoon and shell
           # fight over too many characters otherwise.
           BUILD_PILL_FYRD="${BUILD_PILL_FYRD//GWDESK/$GW_DESK}"
-          echo "pill will bake desks: $GW_DESK node mcp vitriol trill jars trunk groups webterm landscape drive dns chorus"
+          echo "pill will bake desks: $GW_DESK node mcp vitriol trill grubbery jars trunk groups webterm landscape drive dns chorus"
 
           RESULT=$(send_fyrd "$BUILD_PILL_FYRD")
           echo "$RESULT"
