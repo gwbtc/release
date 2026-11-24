@@ -449,15 +449,16 @@ jobs:
           echo "$DESK_DISTER" > ./zod/node/desk.ship
           ./automation/desk-commit.sh node ./zod "$CONN_SOCK"
 
-      - name: Install zig (assembles the %dns desk)
-        run: |
-          # gwbtc/urbit-dns has no checked-in vendored deps; its build.zig
-          # fetches the pinned base-dev/dns/mnemonyms imports and lays the
-          # desk out under zig-out/. Same zig the laptop builds it with.
-          curl -fsSL -o "$RUNNER_TEMP/zig.tar.xz" \
-            https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
-          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/zig-x86_64-linux-0.15.2" >> "$GITHUB_PATH"
+      # gwbtc/urbit-dns has no checked-in vendored deps; its build.zig
+      # fetches the pinned base-dev/dns/mnemonyms imports and lays the desk
+      # out under zig-out/. The %mcp desk and others below use this zig too.
+      # A bare curl from ziglang.org took 11.5 min in run 45413399832;
+      # setup-zig's cache hit took 6 s.
+      - name: Set up Zig 0.15.2
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+          cache-key: pill-desks
 
       - name: Populate %dns desk
         run: |
@@ -574,12 +575,6 @@ jobs:
           done
           [ "$FAILED" -eq 0 ] || exit 1
           echo "%node is installable on this kernel."
-
-      - name: Set up Zig 0.15.2
-        uses: mlugg/setup-zig@v2
-        with:
-          version: 0.15.2
-          cache-key: pill-desks
 
       - name: Populate %mcp desk
         run: |
