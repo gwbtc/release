@@ -20,7 +20,6 @@ VITRIOL_BRANCH      gwbtc/vitriol         master
 TRILL_BRANCH        gwbtc/trill           develop
 LANDSCAPE_BRANCH    tloncorp/landscape    mp/next/kelvin/408
 DRIVE_BRANCH        gwbtc/drive           main
-GRUBBERY_BRANCH     gwbtc/grubbery        develop
 JARS_BRANCH         mopfel-winrux/jars    master
 TRUNK_BRANCH        gwbtc/trunk           main
 GROUPS_REF          tloncorp/tlon-apps    master
