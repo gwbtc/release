@@ -1199,7 +1199,7 @@ jobs:
           # banging a nexus whose source does not compile -- slogs a nest-fail
           # trace and keeps running, so nest-fail is not an agent-death marker.
           if grep -qE 'load-failed|bail: ' zod2-after.log; then
-            echo "ERROR: an agent did not survive the kernel reload:"; grep -nE 'load-failed|bail: |nest-fail' zod2-after.log | head -20; tail -n 80 zod2-after.log; exit 1
+            echo "ERROR: an agent did not survive the kernel reload:"; grep -nE 'load-failed|bail: ' zod2-after.log | head -20; tail -n 80 zod2-after.log; exit 1
           fi
           echo "Kernel-reload gate passed: every agent reloaded ($last revived)."
           kill "$(cat ./zod2/.urb/pid 2>/dev/null)" 2>/dev/null || true
