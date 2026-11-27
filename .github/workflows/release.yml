@@ -111,13 +111,7 @@ env:
   # URBIT_BRANCH's lull: the old API does not compile against it.
   NODE_REF: 50c7f711f75cf9e6e6193ce05fd4780a2a2f3bca
   # desks
-  # c54ea41f (2026-11-24, bm/populate-chorus, gwbtc/groundwire#185 stacked
-  # on #187): gw's setup steps import %chorus's MCP tools, resources and
-  # templates into %mcp-server once gall has installed %chorus (#185), and
-  # skip armillary and wallet-sweep on a ship with no %grubbery desk
-  # (#187). The tarball's gw binary is built from causeway/desktop at this
-  # ref. Re-pin to gw/release once #187 and #185 merge.
-  GROUNDWIRE_BRANCH: c54ea41f513d0ac2e41039ac82430a8ef951736a
+  GROUNDWIRE_BRANCH: ef1bbd54db8e7391781bd114ded19499eee33d71
   URBIT_MCP_BRANCH: fc373d862026b9aaa52ae10fd4e6e71f8b6379a8
   VITRIOL_BRANCH: 9862ec2d2b192629452c791adb3d870000125100
   TRILL_BRANCH: 0886978c3d300ee4b4adeaf617685d74da7134e8
